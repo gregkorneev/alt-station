@@ -4,9 +4,10 @@
 
 ## Состав проекта
 
-- **Bot.md** — Telegram‑бот для мониторинга батареи, температуры и состояния вентилятора. Отправляет уведомления и поддерживает безопасные команды.
-- **file.md** — способы организации доступа к файлам (Samba, Tailscale Serve).
-- **vs_code.md** — удалённый Visual Studio Code через code‑server, VS Code Tunnel и Remote SSH.
+- [Bot.md](docs/Bot.md) — Telegram-бот для мониторинга батареи, температуры и состояния вентилятора. Отправляет уведомления и поддерживает безопасные команды.
+- [file.md](docs/file.md) — способы организации доступа к файлам (Samba, Tailscale Serve).
+- [vs_code.md](docs/vs_code.md) — удалённый Visual Studio Code через code-server, VS Code Tunnel и Remote SSH.
+
 
 ## Структура репозитория
 
