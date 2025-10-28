@@ -1,0 +1,27 @@
+[Unit]
+Description=Battery monitoring Telegram bot (ALT station)
+After=network-online.target
+
+[Service]
+# Edit the environment below to match your configuration.  The
+# BOT_TOKEN is mandatory; all other variables are optional and
+# documented in README.md.
+Environment=BOT_TOKEN=PUT_YOUR_TOKEN_HERE
+Environment=CHECK_INTERVAL_SEC=60
+Environment=ALERT_THRESHOLD=20
+Environment=ALERT_HYSTERESIS=25
+# Set your chat ID to allow admin commands (see /whoami)
+Environment=ADMIN_CHAT_ID=0
+Environment=ENABLE_UNSAFE_SHELL=0
+Environment=DISABLE_SENSORS=0
+
+# Adjust ExecStart to point at the installed location of battery_bot.py.
+# Use %h to reference the user’s home directory when installing in
+# ~/.config/systemd/user.
+ExecStart=/usr/bin/python3 %h/alt-station/battery_bot.py
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
