@@ -1,206 +1,154 @@
-# ALT‑Station Battery & Temperature Bot
+# Бот мониторинга заряда и температуры ALT‑Station
 
-This repository contains a Python script and a SystemD unit for running a
-Telegram bot on an ALT Linux workstation (or any modern Linux
-distribution).  The bot monitors your laptop’s battery level,
-CPU temperature and fan status and sends notifications via Telegram
-when the battery gets low or when the charging state changes.  It also
-provides commands to query the current state on demand and an
-optional interactive shell for administrators.
+Этот репозиторий содержит скрипт на Python и юнит systemd для запуска Telegram‑бота на рабочей станции ALT Linux (или любом современном дистрибутиве Linux). Бот следит за уровнем заряда батареи ноутбука, температурой процессора и состоянием вентилятора и отправляет уведомления в Telegram, когда батарея разряжается или когда меняется состояние питания. Также бот предоставляет команды для запроса текущего состояния по требованию и опциональную интерактивную оболочку для администратора.
 
-> **Note**
-> This bot does **not** download or execute arbitrary code.  The
-> interactive shell is disabled by default and can be enabled only
-> by explicitly setting both an admin chat ID and the
-> ``ENABLE_UNSAFE_SHELL`` flag.
+> **Примечание**  
+> Этот бот **не** скачивает и не выполняет произвольный код. Интерактивная оболочка по умолчанию отключена и может быть включена только при явном указании идентификатора администраторского чата и установке флага ``ENABLE_UNSAFE_SHELL``.
 
-## Features
+## Возможности
 
-* **Battery monitoring** – Periodically checks the battery level using
-  ``upower`` and sends notifications to subscribers when it falls
-  below a configurable threshold (default 20 %) and when it recovers
-  (default ≥ 25 %).  Also notifies when the AC adapter is plugged
-  in or unplugged.
-* **Temperature and fan status** – If ``lm_sensors`` is available,
-  reads CPU temperature and fan RPM via ``sensors -j``.  Falls back
-  to reading thermal zones and hwmon entries under ``/sys`` when
-  possible.  You can disable sensor queries completely by setting
-  ``DISABLE_SENSORS=1``.
-* **Commands via Telegram**:
-  - ``/battery`` – show current battery percentage, charging state,
-    temperature and fan status.
-  - ``/subscribe`` and ``/unsubscribe`` – manage push notifications
-    for the current chat.
-  - ``/run <alias>`` – execute a pre‑defined safe command on the
-    host (see ``battery_bot.py`` for the list).  Use ``/run help``
-    to see available aliases.
-  - ``/whoami`` – show your chat ID (needed to configure admin
-    privileges).
-  - ``/adminstatus``, ``/setadmin <id>``, ``/enable_shell`` and
-    ``/disable_shell`` – manage admin privileges and the unsafe
-    shell flag.
-  - ``/linux`` – open an interactive shell session (admin only;
-    disabled by default).  Subsequent messages are run as shell
-    commands.  Use ``/cd``, ``/pwd`` and ``/exit`` to navigate.
-  - ``/exec <cmd>`` – run a one‑off shell command (admin only;
-    disabled by default).
+* **Мониторинг батареи** – периодически проверяет уровень заряда батареи с помощью ``upower`` и отправляет уведомления подписчикам, когда он падает ниже настраиваемого порога ( по умолчанию 20 %) и когда восстанавливается ( по умолчанию ≥ 25 %). Также сообщает, когда сетевой адаптер подключён или отключён.
+* **Температура и состояние вентилятора** – если доступен ``lm_sensors``, считывает температуру ЦП и скорость вентилятора через ``sensors -j``. При возможности использует информацию о тепловых зонах и устройствах hwmon из ``/sys``. Запросы к датчикам можно полностью отключить, установив ``DISABLE_SENSORS=1``.
+* **Команды через Telegram**:
+  - ``/battery`` – показать текущий процент заряда, состояние зарядки, температуру и состояние вентилятора.
+  - ``/subscribe`` и ``/unsubscribe`` – управляют отправкой уведомлений в текущий чат.
+  - ``/run <алиас>`` – выполнить предопределенную безопасную команду на хосте ( см. ``battery_bot.py`` для списка). ``/run help`` показажет доступные алиасы.
+  - ``/whoami`` – отобразить ваш chat_id ( нужен для настройки прав администратора).
+  - ``/adminstatus``, ``/setadmin <id>``, ``/enable_shell`` и ``/disable_shell`` – менеджмент прав админа и флага небезопасной оболочки.
+  - ``/linux`` – открыть интерактивную shell‑сессию (только для админа; по умолчанию отключено). Последующие сообщения выполняются как shell‑команды. Используйте ``/cd``, ``/pwd`` и ``/exit`` для навигации.
+  - ``/exec <команда>`` – выполнить одну shell‑команду (только для админа; по умолчанию отключено).
 
-## Prerequisites
+## Предварительные требования
 
-Before installing the bot you need to have:
+Перед установкой бота убедитесь, что:
 
-1. **Python 3.7+** installed.  ALT Linux comes with Python by
-   default.
-2. **upower** and **lm_sensors** packages.  Install them with:
+1. **Python 3.7+** установлен. ALT Linux по умолчанию с Python.
+2. Установлены пакеты **upower** и **lm_sensors**. Установите их командой:
 
    ```bash
    sudo apt-get update
    sudo apt-get install upower lm_sensors python3-pip
-   # optional but recommended: detect available sensors
+   # необязательно, но рекомендуется: обнаружить доступные датчики
    sudo sensors-detect
    ```
 
-3. **Python libraries** – install the required packages for the bot:
+3. Установлены необходимые библиотеки Python для бота:
 
    ```bash
    python3 -m pip install --upgrade "python-telegram-bot[job-queue]==20.7"
    ```
 
-4. **A Telegram bot token**.  Create a bot via
-   [@BotFather](https://t.me/BotFather):
-   - Start a chat with @BotFather and send ``/newbot``.
-   - Choose a name and a username for your bot.
-   - Copy the API token that BotFather returns – you will need it
-     for the ``BOT_TOKEN`` environment variable.
+4. У вас есть **токен Telegram‑бота**. Создайте бота через [@BotFather](https://t.me/BotFather):
+   - Начните чат с @BotFather и отправьте ``/newbot``.
+   - Выберите имя и username для вашего бота.
+   - Скопируйте API‑токен, который выдаст BotFather – он нужен для переменной ``BOT_TOKEN``.
 
-5. **Your chat ID** (optional but needed for admin commands).  After
-   running the bot, send ``/whoami`` in your chat with the bot and
-   it will reply with your numeric chat ID.  Use this value in the
-   ``ADMIN_CHAT_ID`` environment variable or set it via the
-   ``/setadmin`` command.
+5. (Полезно для админкоманд) знаете **свой chat_id**. После запуска бота отправьте ему ``/whoami`` – в ответ он пришлёт ваш числовой ID. Укажите это в переменной ``ADMIN_CHAT_ID`` или задайте его через ``/setadmin``.
 
-## Installation
+## Установка
 
-Clone or download this repository on the target machine:
+Склонируйте этот репозиторий на целевой машине:
 
 ```bash
-git clone <repository-url> ~/alt-station
+git clone <url-репозитория> ~/alt-station
 cd ~/alt-station
 ```
 
-The important files are:
+Ключевые файлы:
 
-* **``battery_bot.py``** – the Python script implementing the bot.
-* **``batterybot.service``** – a sample systemd unit for running the
-  bot as a user service.
-* **``README.md``** – this file.
+* **``battery_bot.py``** – основной Python‑скрипт бота.
+* **``batterybot.service``** – пример юнита systemd для запуска бота как пользовательской службы.
+* **``README.md``** – текущая документация.
 
-### Running manually
+### Запуск вручную
 
-Set the required environment variable and run the script:
+Установите нужные переменные окружения и запустите скрипт:
 
 ```bash
-export BOT_TOKEN="<your-telegram-bot-token>"
+export BOT_TOKEN="<токен вашего Telegram‑бота>"
 python3 battery_bot.py
 ```
 
-The bot will start polling Telegram and will respond to commands.
+Бот начнёт опрашивать Telegram и отвечать на команды.
 
-### Installing as a user service (recommended)
+### Установка как пользовательская служба ( рекомендуется )
 
-Running the bot as a systemd **user** service ensures it starts
-automatically when you log into your session.  To install:
+Запуск бота через systemd‑службу **пользователя** гарантирует, что он автоматически запускается при входе в систему. Для установки:
 
-1. Copy the systemd unit into your user configuration directory and
-   edit it to provide your token and optional settings:
+1. Скопируйте юнит systemd в каталог пользовательских сервисов и отредактируйте его, указав ваш токен и прочие параметры:
 
    ```bash
    mkdir -p ~/.config/systemd/user
    cp batterybot.service ~/.config/systemd/user/
-   # Edit the service to set BOT_TOKEN and other variables
+   # Отредактируйте сервис, чтобы указать BOT_TOKEN и прочие переменные
    nano ~/.config/systemd/user/batterybot.service
    ```
 
-   Adjust the ``ExecStart=`` line if you cloned the repository in a
-   different location.
+   При необходимости измените путь в ``ExecStart=``.
 
-2. Reload the systemd user manager and enable/start the service:
+2. Перезагрузите manager systemd пользователя и включите/запусте службу:
 
    ```bash
    systemctl --user daemon-reload
    systemctl --user enable --now batterybot.service
    ```
 
-3. Verify that it’s running:
+3. Проверьте, что бот запущен:
 
    ```bash
    systemctl --user status batterybot.service
    ```
 
-The bot will now run in the background whenever you are logged in.
+Теперь бот будет работать в фоне при каждом входе в систему.
 
-## Configuration via Environment Variables
+## Настройка через переменные окружения
 
-The service file defines environment variables that control the
-behaviour of the bot.  You can modify or add them in
-``batterybot.service`` under the ``[Service]`` section:
+В файле службы определяются переменные окружения, управляющие поведением бота. Их можно менять или добавлять в секции ``[Service]`` файла ``batterybot.service``:
 
-| Variable              | Description                                                   |
-|-----------------------|---------------------------------------------------------------|
-| **BOT_TOKEN**         | *Required.* Telegram API token from @BotFather.              |
-| **CHECK_INTERVAL_SEC**| How often to check the battery (seconds). Default ``60``.    |
-| **ALERT_THRESHOLD**   | Battery % to trigger low battery alerts. Default ``20``.      |
-| **ALERT_HYSTERESIS**  | Battery % at which recovery messages are sent. Default ``25``.|
-| **ADMIN_CHAT_ID**     | Telegram chat ID allowed to use admin commands. Default ``0`` (disabled). |
-| **ENABLE_UNSAFE_SHELL** | Set to ``1`` to enable the interactive shell and ``/exec`` commands for the admin. |
-| **DISABLE_SENSORS**   | Set to ``1`` to skip calling ``sensors``. Useful if lm_sensors isn't configured. |
-| **STATE_DIR**         | Directory where state files are stored. Defaults to ``~/.battery_bot``. |
+| Переменная | Описание |
+|----------------------------|---------|
+| **BOT_TOKEN** | *Обязательна.* API‑токен Telegram от @BotFather. |
+| **CHECK_INTERVAL_SEC** | Как часто проверять батарею (секунды). По умолчанию ``60``. |
+| **ALERT_THRESHOLD** | Процент заряда для отравки сообщения о низком заряде. По умолчанию ``20``. |
+| **ALERT_HYSTERESIS** | Процент заряда для отправки уведомления о восстановлении. По умолчанию ``25``. |
+| **ADMIN_CHAT_ID** | ID чата, которому разрешены админкоманды. ``0`` – отключено. |
+| **ENABLE_UNSAFE_SHELL** | Установите ``1``, чтобы разрешить интерактивную оболочку и команду ``/exec``. |
+| **DISABLE_SENSORS** | Установите ``1``, чтобы не вызывать ``sensors`` (если lm_sensors не настроен). |
+| **STATE_DIR** | Каталог для хранения файлов состояния. Поумолчанию ``~/.battery_bot``. |
 
-After editing the service file, reload and restart it:
+После изменения файла службы запустите:
 
 ```bash
 systemctl --user daemon-reload
 systemctl --user restart batterybot.service
 ```
 
-## Using the Bot
+## Использование бота
 
-1. **Start the bot** and open a chat with your bot on Telegram.
-2. Send ``/start`` to see a list of commands.  Use ``/battery``
-   anytime to get the current battery, temperature and fan status.
-3. Send ``/subscribe`` to receive notifications about low battery and
-   power events; ``/unsubscribe`` to stop them.
-4. If you set an admin chat ID, you can enable the interactive
-   shell:
+1. **Запустите бот** и откройте чат с ним в Telegram.
+2. Отправьте ``/start``, чтобы увидеть список команд. ``/battery`` покажет текущий заряд, температуру и состояние вентилятора.
+3. Отправьте ``/subscribe``, чтобы получать уведомления о низком заряде и изменениях состояния питания; ``/unsubscribe`` отключает их.
+4. Если у вас настроен ``ADMIN_CHAT_ID``, можно включить интерактивную оболочку:
 
    ```bash
-   # either via environment variable
-   export ADMIN_CHAT_ID=<your-id>
+   # через переменные окружения
+   export ADMIN_CHAT_ID=<ваш id>
    export ENABLE_UNSAFE_SHELL=1
-   # or via commands in Telegram
-   /setadmin <your-id>
+   # или через Telegram
+   /setadmin <ваш id>
    /enable_shell
    ```
 
-   Then send ``/linux`` to open a shell session.  Any subsequent
-   messages will be executed on the host.  Use ``/exit`` to close
-   the session.
+   Затем отправьте ``/linux``, чтобы открыть shell‑сессию. Любые следующие сообщения будут выполняться на хосте. ``/exit`` закрывает сеанс.
 
-5. Use ``/run help`` to see which safe commands are available.
+5. ``/run help`` покажет доступные безопасные команды.
 
-## Troubleshooting
+## Решение проблем
 
-* **The bot doesn’t respond** – ensure the service is running and
-  that ``BOT_TOKEN`` is correct.  Check logs via
-  ``journalctl --user -u batterybot.service -f``.
-* **Temperature reads “n/a”** – you may need to run
-  ``sudo sensors-detect`` and load the appropriate kernel modules,
-  or set ``DISABLE_SENSORS=1``.
-* **Interactive shell commands fail** – make sure you have set
-  ``ADMIN_CHAT_ID`` to your chat ID and ``ENABLE_UNSAFE_SHELL=1``.
+* **Бот не отвечает** – убедитесь, что служба запущена и ``BOT_TOKEN`` указан верно. Проверьте журнал командой ``journalctl --user -u batterybot.service -f``.
+* **Температура отображается как «n/a»** – возможно, нужно запустить ``sudo sensors-detect`` и загрузить нужные модули ядра, или установить ``DISABLE_SENSORS=1``.
+* **Команды shell не работают** – убедитесь, что задали ``ADMIN_CHAT_ID`` и установили ``ENABLE_UNSAFE_SHELL=1``.
 
-## Contributing
+## Вклад
 
-Feel free to open issues or pull requests to improve the bot.  You
-can add more safe command aliases to ``SAFE_CMD_MAP`` or extend
-functionality as needed.
+Приглашаем открывать Issue или Pull Request, чтобы улучшить бот: можно добавить новые безопасные алиасы в ``SAFE_CMD_MAP`` или расширить функционал.
